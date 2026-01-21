@@ -63,7 +63,7 @@
             <div class="p-6 sm:p-12">
                 <div class="mb-10 border-l-4 border-indigo-600 pl-5">
                     <h2 class="text-2xl font-black text-slate-800 tracking-tight">แบบฟอร์มรายงานความเสี่ยง</h2>
-                    <p class="text-slate-500 text-sm mt-1">บันทึกลงคอลัมน์ A-E (วันที่, หน่วยงาน, รายละเอียด, ไฟล์, คะแนน)</p>
+                    <p class="text-slate-500 text-sm mt-1">ข้อมูลจะถูกบันทึกลงในชีต: วันที่, หน่วยงาน, รายละเอียด, ไฟล์, คะแนน</p>
                 </div>
 
                 <form id="riskForm" class="space-y-10">
@@ -181,13 +181,14 @@
             </div>
             <div>
                 <p class="font-black text-lg leading-tight">บันทึกสำเร็จ!</p>
-                <p class="text-xs text-slate-400">ข้อมูลถูกส่งไปที่ ชีต1 แล้ว</p>
+                <p class="text-xs text-slate-400">ข้อมูลของคุณถูกส่งไปยัง Google Sheets เรียบร้อยแล้ว</p>
             </div>
         </div>
     </div>
 
     <script>
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbyBVS6Eqjpon-nDphI0FSJXsr1CVRKE4DSIJV4EAQo6eQ2TDGm8K6bp_X7Ku1ebq1k/exec'; 
+        // URL ของ Web App จาก Google Apps Script (อัปเดตแล้ว)
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwKHYke9RwVwgbJA1K8Et4gaXtq1PxvrM6jgIfVhk-tQKuIPqVl-d6Whm8pHhiDDbA/exec'; 
 
         const dateInput = document.getElementById('incidentDate');
         const setNow = () => {
@@ -219,7 +220,7 @@
             e.preventDefault();
             
             submitBtn.disabled = true;
-            submitBtn.textContent = "กำลังประมวลผลไฟล์และส่งข้อมูล...";
+            submitBtn.textContent = "กำลังประมวลผลและส่งข้อมูล...";
             submitBtn.classList.add('opacity-50', 'animate-pulse');
 
             const file = fileInput.files[0];
@@ -228,27 +229,18 @@
             reader.onload = function(event) {
                 const base64Data = event.target.result.split(',')[1];
                 
-                // ใช้เทคนิคส่งผ่าน POST แบบปกติ
-                const dataToSend = {
-                    timestamp: document.getElementById('incidentDate').value,
-                    department: document.getElementById('department').value,
-                    details: document.getElementById('details').value,
-                    riskScore: form.querySelector('input[name="riskScore"]:checked').value,
-                    fileData: base64Data,
-                    fileName: file.name,
-                    fileType: file.type
-                };
-
-                // ส่งข้อมูลด้วย fetch โดยใช้ URLSearchParams เพื่อให้ Apps Script รับ parameter ได้ง่าย
                 const searchParams = new URLSearchParams();
-                for (const key in dataToSend) {
-                    searchParams.append(key, dataToSend[key]);
-                }
+                searchParams.append('timestamp', document.getElementById('incidentDate').value);
+                searchParams.append('department', document.getElementById('department').value);
+                searchParams.append('details', document.getElementById('details').value);
+                searchParams.append('riskScore', form.querySelector('input[name="riskScore"]:checked').value);
+                searchParams.append('fileData', base64Data);
+                searchParams.append('fileName', file.name);
+                searchParams.append('fileType', file.type);
 
                 fetch(scriptURL, { 
                     method: 'POST', 
-                    mode: 'no-cors', // Apps Script ต้องใช้ mode นี้
-                    cache: 'no-cache',
+                    mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: searchParams
                 })
@@ -257,7 +249,7 @@
                 })
                 .catch(error => {
                     console.error('Error!', error.message);
-                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                    alert('ไม่สามารถส่งข้อมูลได้ โปรดตรวจสอบการตั้งค่า Apps Script');
                     resetBtn();
                 });
             };
@@ -265,7 +257,7 @@
             if (file) {
                 reader.readAsDataURL(file);
             } else {
-                alert('กรุณาเลือกไฟล์');
+                alert('กรุณาเลือกไฟล์หลักฐาน');
                 resetBtn();
             }
         });
