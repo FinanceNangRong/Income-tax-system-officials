@@ -156,7 +156,7 @@
             </div>
         </section>
 
-        <!-- แสดงผลหน้าตาราง Google Sheet ลิงก์ใหม่ -->
+        <!-- แสดงผลหน้าตาราง Google Sheet -->
         <section class="space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
                 <div class="flex items-center gap-3">
@@ -171,7 +171,6 @@
             
             <div class="bg-white p-3 rounded-[2rem] shadow-xl border border-slate-100">
                 <div class="iframe-container">
-                    <!-- แสดงผลผ่านลิงก์ Google Sheets PubHTML -->
                     <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSP-FgCnDAui_xEti8EKPh4ypv6LeTxYCCCToD4eq3D4GHrSvU6A2q3lZ7SywCVv5DVczS5vA5MwNQd/pubhtml?widget=true&amp;headers=false"></iframe>
                 </div>
             </div>
@@ -194,9 +193,8 @@
 
     <script>
         // --- การตั้งค่า Google Apps Script ---
-        const scriptURL = "https://script.google.com/macros/s/AKfycbyBVS6Eqjpon-nDphI0FSJXsr1CVRKE4DSIJV4EAQo6eQ2TDGm8K6bp_X7Ku1ebq1k/exec"; // ใส่ URL ของ Web App จาก Apps Script ที่นี่
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyBVS6Eqjpon-nDphI0FSJXsr1CVRKE4DSIJV4EAQo6eQ2TDGm8K6bp_X7Ku1ebq1k/exec'; 
 
-        // ตั้งค่าเวลาปัจจุบันเริ่มต้น
         const dateInput = document.getElementById('incidentDate');
         const setNow = () => {
             const now = new Date();
@@ -205,7 +203,6 @@
         };
         setNow();
 
-        // การแสดงผลการอัปโหลดไฟล์
         const fileInput = document.getElementById('fileUpload');
         const fileNameDisplay = document.getElementById('fileName');
         const fileStatusText = document.getElementById('fileStatusText');
@@ -220,7 +217,6 @@
             }
         });
 
-        // การส่งข้อมูล
         const form = document.getElementById('riskForm');
         const submitBtn = document.getElementById('submitBtn');
         const toast = document.getElementById('toast');
@@ -228,25 +224,51 @@
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             
+            if (!scriptURL) {
+                alert('โปรดใส่ scriptURL ในโค้ดก่อนทำการส่งข้อมูลจริง');
+                return;
+            }
+
             submitBtn.disabled = true;
-            submitBtn.textContent = "กำลังเชื่อมต่อคอลัมน์ A-E...";
+            submitBtn.textContent = "กำลังบันทึกลงคอลัมน์ A-E...";
             submitBtn.classList.add('opacity-50', 'animate-pulse');
 
-            const formData = new FormData(form);
-            
-            if (scriptURL) {
-                fetch(scriptURL, { method: 'POST', body: formData })
-                .then(response => {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const base64Data = event.target.result.split(',')[1];
+                const params = new URLSearchParams();
+                
+                params.append('timestamp', document.getElementById('incidentDate').value);
+                params.append('department', document.getElementById('department').value);
+                params.append('details', document.getElementById('details').value);
+                params.append('riskScore', form.querySelector('input[name="riskScore"]:checked').value);
+                params.append('fileData', base64Data);
+                params.append('fileName', file.name);
+                params.append('fileType', file.type);
+
+                fetch(scriptURL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                })
+                .then(() => {
                     handleSuccess();
                 })
                 .catch(error => {
                     console.error('Error!', error.message);
-                    alert('ไม่สามารถบันทึกได้ โปรดตรวจสอบการตั้งค่า Apps Script');
+                    alert('เกิดข้อผิดพลาดในการส่งข้อมูล');
                     resetBtn();
                 });
+            };
+
+            if (file) {
+                reader.readAsDataURL(file);
             } else {
-                // จำลองการสำเร็จในกรณีที่ยังไม่มี Script URL
-                setTimeout(handleSuccess, 2000);
+                alert('กรุณาเลือกไฟล์');
+                resetBtn();
             }
         });
 
@@ -257,13 +279,8 @@
             fileNameDisplay.classList.add('hidden');
             fileStatusText.textContent = "เลือกไฟล์ PDF หรือ รูปภาพ";
             dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
-            
             resetBtn();
-
-            setTimeout(() => {
-                toast.classList.add('translate-y-32', 'opacity-0');
-            }, 4000);
-            
+            setTimeout(() => toast.classList.add('translate-y-32', 'opacity-0'), 4000);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
