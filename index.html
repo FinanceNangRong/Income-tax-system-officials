@@ -3,243 +3,489 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานเจ้าหนี้คงเหลือ</title>
+    <title>ระบบรายงานเจ้าหนี้อัตโนมัติ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            transition: background-color 0.3s ease;
+            font-size: 13px; 
+            color: #000000; /* กำหนดสีพื้นฐานเป็นสีดำ */
+        }
+        .dark body { background-color: #0f172a; color: #ffffff; }
+        .dark .bg-white { background-color: #1e293b; border-color: #334155; }
+        .dark .text-black { color: #ffffff !important; } /* เมื่อเป็น Dark Mode ให้เป็นสีขาว */
+        .dark .bg-gray-50 { background-color: #0f172a; }
+        .dark .border-gray-100 { border-color: #334155; }
+        .dark input, .dark select { background-color: #1e293b; border-color: #334155; color: #f1f5f9; }
+        
+        .table-bordered th, .table-bordered td { 
+            border: 1px solid #cbd5e1; 
+            padding: 6px 8px !important; 
+        }
+        .dark .table-bordered th, .table-bordered td { border: 1px solid #334155; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
         @media print {
-            .no-print { display: none; }
-            body { background: white; }
-            .print-shadow-none { shadow: none; border: 1px solid #eee; }
+            @page { size: landscape; margin: 1cm; }
+            body { background-color: white !important; padding: 0 !important; -webkit-print-color-adjust: exact; font-size: 10pt !important; color: black !important; }
+            .no-print { display: none !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #000 !important; padding: 4px !important; }
         }
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+
+        @keyframes pulse-emerald {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .sync-active { animation: pulse-emerald 2s infinite; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased min-h-screen p-4 md:p-8">
+<body class="p-3 md:p-6 bg-gray-50 transition-colors duration-300 text-black">
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-7xl mx-auto space-y-4">
         <!-- Header -->
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-center no-print">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    <span class="p-2 bg-blue-600 text-white rounded-lg shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 no-print">
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl font-bold text-black">ระบบรายงานเจ้าหนี้ ✨</h1>
+                    <span id="autoSyncBadge" class="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full sync-active"></span>
+                        Auto-Sync On
                     </span>
-                    รายงานเจ้าหนี้คงเหลือ
-                </h1>
-                <p class="text-gray-500 mt-2 flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    เชื่อมต่อข้อมูลสดจาก Google Drive
-                </p>
+                </div>
+                <p class="text-indigo-600 font-semibold text-xs italic">อัปเดตข้อมูลอัตโนมัติจาก Google Sheets</p>
             </div>
-            <div class="flex gap-3 mt-4 md:mt-0">
-                <button onclick="fetchData()" class="flex items-center gap-2 bg-white border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" id="refresh-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    รีเฟรชข้อมูล
+            <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
+                <button id="syncCloudBtn" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm text-xs">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="syncIcon"></i>
+                    <span>รีเฟรชตอนนี้</span>
                 </button>
-                <button onclick="window.print()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-md font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                <label class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer text-xs">
+                    <i data-lucide="file-up" class="w-4 h-4"></i>
+                    <span>อัปโหลด Excel</span>
+                    <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden">
+                </label>
+                <button id="darkModeToggle" class="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                    <i data-lucide="moon" id="moonIcon" class="w-4 h-4"></i>
+                    <i data-lucide="sun" id="sunIcon" class="w-4 h-4 hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3 no-print">
+            <div class="flex items-center justify-between mb-1 border-b pb-2">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="filter" class="text-indigo-500 w-4 h-4"></i>
+                    <h2 class="font-bold text-sm text-black">ค้นหาและกรองข้อมูล</h2>
+                </div>
+                <span id="lastUpdateText" class="text-[10px] text-gray-500 font-bold">อัปเดตล่าสุด: กำลังโหลด...</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">ชื่อบริษัท/เจ้าหนี้</label>
+                    <div class="relative">
+                        <i data-lucide="building-2" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400"></i>
+                        <input type="text" id="searchCreditor" placeholder="ค้นหา..." class="pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full focus:ring-2 focus:ring-indigo-500 text-black">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">เลขที่ใบแจ้งหนี้</label>
+                    <div class="relative">
+                        <i data-lucide="hash" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400"></i>
+                        <input type="text" id="searchInvoice" placeholder="ค้นหา..." class="pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full focus:ring-2 focus:ring-indigo-500 text-black">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">สถานะการชำระ</label>
+                    <select id="filterStatus" class="px-3 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full focus:ring-2 focus:ring-indigo-500 text-black">
+                        <option value="All">ทุกสถานะ</option>
+                        <option value="Paid">จ่ายครบแล้ว</option>
+                        <option value="Unpaid">ยังไม่จ่าย</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">ประเภทค่าใช้จ่าย</label>
+                    <div class="relative group">
+                        <div id="expenseTypeDropdownBtn" class="flex justify-between items-center px-3 py-1.5 border border-gray-300 rounded-lg cursor-pointer text-xs bg-white dark:bg-slate-800">
+                            <span id="selectedExpenseLabel" class="truncate text-black font-semibold">ทั้งหมด</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-black"></i>
+                        </div>
+                        <div id="expenseMenu" class="hidden absolute left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-300 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar p-1.5">
+                            <label class="flex items-center gap-2 p-1.5 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md cursor-pointer border-b mb-1">
+                                <input type="checkbox" id="checkAllExpenses" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-[11px] font-bold text-black">เลือกทั้งหมด</span>
+                            </label>
+                            <div id="expenseCheckboxes" class="space-y-0.5"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">วันที่ตรวจรับของ</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="date" id="dateReceiveStart" class="px-2 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full text-black">
+                        <span class="text-gray-400">-</span>
+                        <input type="date" id="dateReceiveEnd" class="px-2 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full text-black">
+                    </div>
+                </div>
+                <div class="lg:col-span-2 space-y-1">
+                    <label class="text-[10px] font-bold text-black uppercase">วันที่ชำระเงิน</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="date" id="datePaymentStart" class="px-2 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full text-black">
+                        <span class="text-gray-400">-</span>
+                        <input type="date" id="datePaymentEnd" class="px-2 py-1.5 border border-gray-300 rounded-lg outline-none text-xs w-full text-black">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 no-print text-black">
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">ยอดหนี้รวม</p>
+                <h3 id="statTotal" class="text-lg font-bold">0.00</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-500">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">จ่ายแล้ว</p>
+                <h3 id="statPaid" class="text-lg font-bold text-green-700">0.00</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-orange-500">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">ปรับปรุง</p>
+                <h3 id="statAdjustment" class="text-lg font-bold text-orange-700">0.00</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-500">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">คงเหลือ</p>
+                <h3 id="statBalance" class="text-lg font-bold text-red-700">0.00</h3>
+            </div>
+        </div>
+
+        <!-- Summary Table -->
+        <div id="summarySection" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-3 border-b bg-indigo-50 dark:bg-slate-800 flex items-center justify-between no-print">
+                <div class="flex items-center gap-1.5 font-bold text-xs text-black">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-indigo-600"></i>
+                    สรุปตามประเภทค่าใช้จ่าย
+                </div>
+                <button onclick="window.print()" class="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition shadow-sm text-[11px] font-semibold">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                     พิมพ์รายงาน
                 </button>
             </div>
-        </header>
-
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" id="summary-container">
-            <!-- Loading placeholders -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-24"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-24"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-24"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-24"></div>
-        </div>
-
-        <!-- Main Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 print:border-none">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-600 font-bold">
-                            <th class="px-6 py-4">ค่า (รายการ)</th>
-                            <th class="px-6 py-4">ประจำเดือน</th>
-                            <th class="px-6 py-4 text-right">จำนวนเงิน</th>
-                            <th class="px-6 py-4 text-right text-green-700">จ่าย</th>
-                            <th class="px-6 py-4 text-right text-orange-700">ปรับปรุง</th>
-                            <th class="px-6 py-4 text-right bg-red-50 text-red-700 font-bold">คงเหลือ</th>
+            <div class="p-3 overflow-x-auto">
+                <table class="w-full text-xs text-left table-bordered border-collapse text-black">
+                    <thead class="bg-gray-100 dark:bg-slate-700">
+                        <tr class="text-black font-bold text-[11px] uppercase">
+                            <th class="p-2 text-center w-12">ลำดับ</th>
+                            <th class="p-2">ประเภทค่าใช้จ่าย</th>
+                            <th class="p-2 text-center w-24">รายการ</th>
+                            <th class="p-2 text-right">ยอดรวม</th>
+                            <th class="p-2 text-right text-green-700">จ่ายแล้ว</th>
+                            <th class="p-2 text-right text-orange-600">ปรับปรุง</th>
+                            <th class="p-2 text-right text-red-700 font-bold">คงเหลือ</th>
                         </tr>
                     </thead>
-                    <tbody id="table-body" class="divide-y divide-gray-100">
-                        <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
-                                <div class="flex justify-center items-center gap-3 text-gray-400">
-                                    <div class="loading-spinner"></div>
-                                    กำลังดาวน์โหลดข้อมูล...
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                    <tfoot id="table-foot" class="bg-gray-50 font-bold border-t-2 border-gray-200 hidden">
+                    <tbody id="summaryTableBody" class="divide-y divide-gray-200"></tbody>
+                    <tfoot class="bg-gray-50 dark:bg-slate-800 font-bold border-t-2 border-gray-300">
+                        <tr id="summaryTableFooter"></tr>
                     </tfoot>
                 </table>
             </div>
         </div>
 
-        <!-- Demo Data Notice (Only shown in preview environments) -->
-        <div id="demo-notice" class="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-lg text-yellow-700 text-xs hidden no-print">
-            <strong>หมายเหตุ:</strong> ขณะนี้กำลังแสดงข้อมูลตัวอย่าง (Demo Data) เนื่องจากติดข้อจำกัดการเข้าถึงข้อมูลข้ามโดเมนในหน้า Preview นี้ หากเปิดไฟล์ในคอมพิวเตอร์ของคุณ ระบบจะแสดงข้อมูลจาก Google Sheets จริง
+        <!-- Details Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden no-print">
+            <div class="p-3 border-b bg-gray-50 dark:bg-slate-800">
+                <h3 class="font-bold text-xs text-black flex items-center gap-1.5">
+                    <i data-lucide="file-text" class="w-4 h-4 text-indigo-500"></i>
+                    รายละเอียดรายการทั้งหมด
+                </h3>
+            </div>
+            <div class="p-3 overflow-x-auto">
+                <table class="w-full text-left text-[11px] table-bordered border-collapse text-black">
+                    <thead>
+                        <tr class="text-black font-bold bg-gray-100 dark:bg-slate-700">
+                            <th class="p-2 w-20">วันที่รับ</th>
+                            <th class="p-2">ชื่อเจ้าหนี้ / เลขบิล</th>
+                            <th class="p-2 text-right">จำนวนเงิน</th>
+                            <th class="p-2 text-right text-green-700">จ่าย</th>
+                            <th class="p-2 text-right text-orange-600">ปรับ</th>
+                            <th class="p-2 text-right text-red-700">คงเหลือ</th>
+                            <th class="p-2 text-center w-20">วันที่ชำระ</th>
+                            <th class="p-2 text-center w-16">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-gray-200">
+                        <tr><td colspan="8" class="p-6 text-center text-gray-500 italic">กำลังดึงข้อมูลอัตโนมัติ...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-
-        <footer class="mt-8 text-center text-xs text-gray-400 no-print">
-            <p>ระบบรายงานบัญชีเจ้าหนี้ออนไลน์ &bull; อัปเดตล่าสุด: <span id="last-update">-</span></p>
-        </footer>
     </div>
 
+    <div id="statusMsg" class="hidden fixed bottom-4 right-4 p-3 rounded-lg shadow-lg z-[60] text-xs animate-bounce"></div>
+
     <script>
-        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSFdX-ihIPt_qLmJz_6gYvOoP7Ql1d4ffu3BQgJBu9omjgRmmoX_w0_K00m_vvXHA/pub?gid=1374114448&single=true&output=csv";
+        let rawData = [];
+        let filteredDataGlobal = [];
+        let selectedExpenseTypes = new Set();
+        let syncInterval;
+        
+        lucide.createIcons();
 
-        // ข้อมูลตัวอย่างสำหรับแสดงใน Preview
-        const DEMO_DATA = [
-            ["เจ้าหนี้ บจก. เอ บิสิเนส", "มกราคม 2567", "50000", "20000", "0"],
-            ["ค่าเช่าอาคารสำนักงาน", "กุมภาพันธ์ 2567", "15000", "15000", "0"],
-            ["ค่าไฟฟ้า - การไฟฟ้า", "มกราคม 2567", "4200.50", "4000", "-200.50"],
-            ["ค่าวัสดุสำนักงาน", "มีนาคม 2567", "8500", "0", "0"],
-            ["เจ้าหนี้ บจก. ที คอนซัลท์", "กุมภาพันธ์ 2567", "25000", "10000", "500"]
-        ];
-
-        const formatCurrency = (num) => {
-            return new Intl.NumberFormat('th-TH', { 
-                style: 'currency', 
-                currency: 'THB',
-                minimumFractionDigits: 2 
-            }).format(num);
+        window.onload = function() {
+            fetchFromCloud(); 
+            startAutoSync(); 
         };
 
-        function updateUI(lines, isDemo = false) {
-            const tableBody = document.getElementById('table-body');
-            const summaryContainer = document.getElementById('summary-container');
-            const tableFoot = document.getElementById('table-foot');
-            const lastUpdate = document.getElementById('last-update');
-            const demoNotice = document.getElementById('demo-notice');
-
-            if (isDemo) demoNotice.classList.remove('hidden');
-
-            const data = [];
-            let totals = { amount: 0, paid: 0, adjust: 0, balance: 0 };
-
-            // วนลูปประมวลผลข้อมูล
-            lines.forEach((cols, index) => {
-                // ข้ามแถวหัวตารางถ้าเป็นข้อมูลจาก CSV จริง
-                if (!isDemo && index === 0) return;
-                
-                if (cols.length >= 3) {
-                    const amount = parseFloat(cols[2]) || 0;
-                    const paid = parseFloat(cols[3]) || 0;
-                    const adjust = parseFloat(cols[4]) || 0;
-                    const balance = amount - paid + adjust;
-
-                    data.push({
-                        name: cols[0],
-                        period: cols[1],
-                        amount,
-                        paid,
-                        adjust,
-                        balance
-                    });
-
-                    totals.amount += amount;
-                    totals.paid += paid;
-                    totals.adjust += adjust;
-                    totals.balance += balance;
-                }
-            });
-
-            // แสดงการ์ดสรุป
-            summaryContainer.innerHTML = `
-                ${renderCard("ยอดหนี้รวม", totals.amount, "blue", "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6")}
-                ${renderCard("ยอดจ่ายแล้ว", totals.paid, "green", "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6")}
-                ${renderCard("ปรับปรุงเจ้าหนี้", totals.adjust, "orange", "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z")}
-                ${renderCard("คงเหลือสุทธิ", totals.balance, "red", "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z")}
-            `;
-
-            // แสดงตาราง
-            tableBody.innerHTML = data.map(item => `
-                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                    <td class="px-6 py-4 font-medium text-gray-900">${item.name}</td>
-                    <td class="px-6 py-4 text-gray-500">${item.period}</td>
-                    <td class="px-6 py-4 text-right font-mono">${formatCurrency(item.amount)}</td>
-                    <td class="px-6 py-4 text-right text-green-600 font-mono">${item.paid !== 0 ? formatCurrency(item.paid) : '0.00'}</td>
-                    <td class="px-6 py-4 text-right text-orange-600 font-mono">${item.adjust !== 0 ? (item.adjust > 0 ? '+' : '') + formatCurrency(item.adjust) : '0.00'}</td>
-                    <td class="px-6 py-4 text-right font-bold text-red-600 bg-red-50/30 font-mono">${formatCurrency(item.balance)}</td>
-                </tr>
-            `).join('');
-
-            // แสดงยอดรวมท้ายตาราง
-            tableFoot.classList.remove('hidden');
-            tableFoot.innerHTML = `
-                <tr class="bg-gray-100 border-t-2 border-gray-300">
-                    <td class="px-6 py-4 text-gray-900" colSpan="2">รวมสุทธิ</td>
-                    <td class="px-6 py-4 text-right">${formatCurrency(totals.amount)}</td>
-                    <td class="px-6 py-4 text-right text-green-700">${formatCurrency(totals.paid)}</td>
-                    <td class="px-6 py-4 text-right text-orange-700">${formatCurrency(totals.adjust)}</td>
-                    <td class="px-6 py-4 text-right text-red-700 font-bold">${formatCurrency(totals.balance)}</td>
-                </tr>
-            `;
-
-            lastUpdate.innerText = new Date().toLocaleString('th-TH');
+        function startAutoSync() {
+            if (syncInterval) clearInterval(syncInterval);
+            syncInterval = setInterval(() => {
+                fetchFromCloud(true);
+            }, 300000); // 5 mins
         }
 
-        async function fetchData() {
-            const refreshIcon = document.getElementById('refresh-icon');
-            refreshIcon.classList.add('animate-spin');
+        const dropBtn = document.getElementById('expenseTypeDropdownBtn');
+        const menu = document.getElementById('expenseMenu');
+        dropBtn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
+        document.onclick = () => menu.classList.add('hidden');
 
+        function parseThaiDate(dateStr) {
+            if (!dateStr || dateStr === '-' || dateStr === '0') return null;
+            const months = { 'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3, 'พ.ค.': 4, 'มิ.ย.': 5, 'ก.ค.': 6, 'ส.ค.': 7, 'ก.ย.': 8, 'ต.ค.': 9, 'พ.ย.': 10, 'ธ.ค.': 11 };
+            const parts = String(dateStr).trim().split(' ');
+            if (parts.length < 3) return null;
+            const day = parseInt(parts[0]);
+            const month = months[parts[1]] ?? 0;
+            let year = parseInt(parts[2]);
+            if (year < 100) year += 2500;
+            return new Date(year - 543, month, day);
+        }
+
+        const parseNum = (v) => v ? parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0 : 0;
+
+        async function fetchFromCloud(isBackground = false) {
+            const icon = document.getElementById('syncIcon');
+            const badge = document.querySelector('#autoSyncBadge span');
+            icon.classList.add('animate-spin');
+            if (badge) badge.classList.add('sync-active');
+            
             try {
-                const response = await fetch(CSV_URL);
-                if (!response.ok) throw new Error('Network response was not ok');
+                const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSFdX-ihIPt_qLmJz_6gYvOoP7Ql1d4ffu3BQgJBu9omjgRmmoX_w0_K00m_vvXHA/pub?output=csv";
+                const response = await fetch(`${SHEET_CSV_URL}&t=${new Date().getTime()}`);
                 const csvText = await response.text();
-                const lines = csvText.split('\n').map(l => l.split(','));
-                updateUI(lines, false);
-            } catch (err) {
-                console.warn("Fetch failed, using demo data:", err);
-                // ถ้า fetch ไม่ได้ (เช่น ในหน้า Preview) ให้ใช้ Demo Data
-                setTimeout(() => updateUI(DEMO_DATA, true), 500);
-            } finally {
-                setTimeout(() => refreshIcon.classList.remove('animate-spin'), 500);
+                const rows = csvText.split(/\r?\n/).map(line => {
+                    const res = []; let c = "", q = false;
+                    for (let char of line) {
+                        if (char === '"') q = !q;
+                        else if (char === ',' && !q) { res.push(c); c = ""; }
+                        else c += char;
+                    }
+                    res.push(c); return res;
+                });
+                processRows(rows.slice(1));
+                const now = new Date();
+                document.getElementById('lastUpdateText').innerText = `อัปเดตล่าสุด: ${now.toLocaleTimeString('th-TH')}`;
+            } catch (err) { 
+                console.error(err);
+            } finally { 
+                icon.classList.remove('animate-spin');
+                if (badge) badge.classList.remove('sync-active');
             }
         }
 
-        function renderCard(title, value, color, iconPath) {
-            const colorClasses = {
-                blue: "text-blue-600 bg-blue-50 border-blue-100",
-                green: "text-green-600 bg-green-50 border-green-100",
-                orange: "text-orange-600 bg-orange-50 border-orange-100",
-                red: "text-red-600 bg-red-50 border-red-200 border-l-4 border-l-red-500"
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                processRows(jsonData.slice(1));
+                showStatus("นำเข้าสำเร็จ!", "success");
             };
-            return `
-                <div class="bg-white p-5 rounded-xl shadow-sm border ${colorClasses[color]}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${title}</p>
-                            <h3 class="text-xl font-bold text-gray-800">${formatCurrency(value)}</h3>
-                        </div>
-                        <div class="p-2 rounded-lg ${colorClasses[color]}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            `;
+            reader.readAsArrayBuffer(file);
         }
 
-        window.onload = fetchData;
+        function processRows(rows) {
+            const expenses = new Set();
+            rawData = rows.filter(r => r[2] || r[3]).map(row => {
+                const expType = String(row[12] || 'ไม่ระบุ').trim();
+                expenses.add(expType);
+                return {
+                    date: row[1] || '-',
+                    dateObj: parseThaiDate(row[1]),
+                    creditor: String(row[2] || '-').trim(),
+                    invoice: String(row[3] || '-').trim(),
+                    amount: parseNum(row[4]),
+                    paid: parseNum(row[5]),
+                    adjustment: parseNum(row[6]),
+                    balance: parseNum(row[7]),
+                    paymentDate: row[8] || '-',
+                    paymentDateObj: parseThaiDate(row[8]),
+                    expenseType: expType
+                };
+            });
+
+            const existingMenu = document.getElementById('expenseCheckboxes');
+            const sortedExps = Array.from(expenses).sort((a,b) => a.localeCompare(b, 'th'));
+            
+            if (existingMenu.innerHTML === "" || sortedExps.length > 0) {
+                existingMenu.innerHTML = sortedExps.map(exp => `
+                    <label class="flex items-center gap-2 p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md cursor-pointer text-xs">
+                        <input type="checkbox" value="${exp}" checked class="expense-item w-3 h-3 rounded text-indigo-600">
+                        <span class="text-[11px] truncate text-black font-medium">${exp}</span>
+                    </label>
+                `).join('');
+
+                selectedExpenseTypes = new Set(sortedExps);
+                document.querySelectorAll('.expense-item').forEach(el => {
+                    el.onchange = () => {
+                        el.checked ? selectedExpenseTypes.add(el.value) : selectedExpenseTypes.delete(el.value);
+                        updateMultiSelectLabel();
+                        applyFilters();
+                    };
+                });
+            }
+            updateMultiSelectLabel();
+            applyFilters();
+        }
+
+        function updateMultiSelectLabel() {
+            const label = document.getElementById('selectedExpenseLabel');
+            const total = document.querySelectorAll('.expense-item').length;
+            const selected = selectedExpenseTypes.size;
+            label.innerText = selected === total ? "ทั้งหมด" : (selected === 0 ? "ไม่ได้เลือก" : `เลือก ${selected}`);
+        }
+
+        function applyFilters() {
+            const searchC = document.getElementById('searchCreditor').value.toLowerCase();
+            const searchI = document.getElementById('searchInvoice').value.toLowerCase();
+            const sk = document.getElementById('filterStatus').value;
+            
+            const rS = document.getElementById('dateReceiveStart').value ? new Date(document.getElementById('dateReceiveStart').value) : null;
+            const rE = document.getElementById('dateReceiveEnd').value ? new Date(document.getElementById('dateReceiveEnd').value) : null;
+            const pS = document.getElementById('datePaymentStart').value ? new Date(document.getElementById('datePaymentStart').value) : null;
+            const pE = document.getElementById('datePaymentEnd').value ? new Date(document.getElementById('datePaymentEnd').value) : null;
+
+            filteredDataGlobal = rawData.filter(d => {
+                const matchC = d.creditor.toLowerCase().includes(searchC);
+                const matchI = d.invoice.toLowerCase().includes(searchI);
+                const matchE = selectedExpenseTypes.has(d.expenseType);
+                const matchS = sk === 'All' || (sk === 'Paid' ? d.balance <= 0 : d.balance > 0);
+
+                let mDR = true;
+                if (rS && d.dateObj) { const dO = new Date(d.dateObj); dO.setHours(0,0,0,0); if (dO < rS) mDR = false; }
+                if (rE && d.dateObj) { const dO = new Date(d.dateObj); dO.setHours(0,0,0,0); if (dO > rE) mDR = false; }
+
+                let mDP = true;
+                if (pS && d.paymentDateObj) { const dO = new Date(d.paymentDateObj); dO.setHours(0,0,0,0); if (dO < pS) mDP = false; } 
+                else if (pS && !d.paymentDateObj) mDP = false;
+                if (pE && d.paymentDateObj) { const dO = new Date(d.paymentDateObj); dO.setHours(0,0,0,0); if (dO > pE) mDP = false; }
+                else if (pE && !d.paymentDateObj) mDP = false;
+
+                return matchC && matchI && matchE && matchS && mDR && mDP;
+            });
+            updateUI();
+        }
+
+        function updateUI() {
+            const data = filteredDataGlobal;
+            const format = (v) => v.toLocaleString(undefined, {minimumFractionDigits: 2});
+            const stats = data.reduce((acc, r) => ({ t: acc.t + r.amount, p: acc.p + r.paid, a: acc.a + r.adjustment, b: acc.b + r.balance }), {t:0, p:0, a:0, b:0});
+
+            document.getElementById('statTotal').innerText = format(stats.t);
+            document.getElementById('statPaid').innerText = format(stats.p);
+            document.getElementById('statAdjustment').innerText = format(stats.a);
+            document.getElementById('statBalance').innerText = format(stats.b);
+
+            const expMap = {};
+            data.forEach(r => {
+                if (!expMap[r.expenseType]) expMap[r.expenseType] = { count: 0, amount: 0, paid: 0, adj: 0, bal: 0 };
+                const m = expMap[r.expenseType];
+                m.count++; m.amount += r.amount; m.paid += r.paid; m.adj += r.adjustment; m.bal += r.balance;
+            });
+
+            document.getElementById('summaryTableBody').innerHTML = Object.entries(expMap).sort().map(([type, s], idx) => `
+                <tr class="hover:bg-indigo-50">
+                    <td class="p-2 text-center text-black font-mono">${idx + 1}</td>
+                    <td class="p-2 font-bold text-black">${type}</td>
+                    <td class="p-2 text-center text-black">${s.count}</td>
+                    <td class="p-2 text-right text-black font-semibold">${format(s.amount)}</td>
+                    <td class="p-2 text-right text-green-800 font-semibold">${format(s.paid)}</td>
+                    <td class="p-2 text-right text-orange-700 font-semibold">${format(s.adj)}</td>
+                    <td class="p-2 text-right text-red-700 font-bold">${format(s.bal)}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="p-6 text-center text-gray-500 italic">ไม่มีข้อมูล</td></tr>';
+
+            document.getElementById('summaryTableFooter').innerHTML = data.length ? `
+                <td colspan="2" class="p-2 text-center text-black font-bold">ยอดรวมทั้งสิ้น</td>
+                <td class="p-2 text-center text-black font-bold">${data.length}</td>
+                <td class="p-2 text-right text-black font-bold">${format(stats.t)}</td>
+                <td class="p-2 text-right text-green-800 font-bold">${format(stats.p)}</td>
+                <td class="p-2 text-right text-orange-700 font-bold">${format(stats.a)}</td>
+                <td class="p-2 text-right text-red-700 font-bold">${format(stats.b)}</td>
+            ` : '';
+
+            document.getElementById('dataTableBody').innerHTML = data.map(r => `
+                <tr class="hover:bg-indigo-50">
+                    <td class="p-2 text-black font-medium">${r.date}</td>
+                    <td class="p-2">
+                        <div class="font-bold text-black truncate max-w-[250px]">${r.creditor}</div>
+                        <div class="text-[9px] text-indigo-700 font-bold">${r.invoice}</div>
+                    </td>
+                    <td class="p-2 text-right text-black font-semibold">${format(r.amount)}</td>
+                    <td class="p-2 text-right text-green-800 font-semibold">${format(r.paid)}</td>
+                    <td class="p-2 text-right text-orange-700 font-semibold">${format(r.adjustment)}</td>
+                    <td class="p-2 text-right font-bold text-red-700">${format(r.balance)}</td>
+                    <td class="p-2 text-center text-black font-medium">${r.paymentDate}</td>
+                    <td class="p-2 text-center">
+                        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${r.balance <= 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">
+                            ${r.balance <= 0 ? 'ครบ' : 'ค้าง'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showStatus(m, t) {
+            const el = document.getElementById('statusMsg');
+            el.innerText = m;
+            el.className = `fixed bottom-4 right-4 p-3 rounded-lg shadow-lg z-[60] block text-xs ${t === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        document.getElementById('syncCloudBtn').onclick = () => fetchFromCloud();
+        document.getElementById('excelInput').onchange = handleExcelUpload;
+        ['searchCreditor', 'searchInvoice', 'filterStatus', 'dateReceiveStart', 'dateReceiveEnd', 'datePaymentStart', 'datePaymentEnd'].forEach(id => {
+            document.getElementById(id).oninput = applyFilters;
+        });
+
+        document.getElementById('darkModeToggle').onclick = () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            document.getElementById('moonIcon').classList.toggle('hidden', isDark);
+            document.getElementById('sunIcon').classList.toggle('hidden', !isDark);
+        };
+
+        document.getElementById('checkAllExpenses').onchange = (e) => {
+            document.querySelectorAll('.expense-item').forEach(item => {
+                item.checked = e.target.checked;
+                e.target.checked ? selectedExpenseTypes.add(item.value) : selectedExpenseTypes.delete(item.value);
+            });
+            updateMultiSelectLabel();
+            applyFilters();
+        };
     </script>
 </body>
 </html>
