@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบค้นหาใบหักภาษี (Strict Search)</title>
+    <title>ระบบค้นหาหนังสือรับรองหักภาษี ณ ที่จ่าย</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
@@ -17,7 +17,6 @@
     <style>
         body { font-family: 'Sarabun', sans-serif; transition: background-color 0.3s, color 0.3s; }
         
-        /* สไตล์สำหรับการแสดงผลบนหน้าจอ */
         .page-preview {
             background-color: white;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -30,42 +29,15 @@
             border-color: #334155;
         }
 
-        /* สไตล์สำหรับการพิมพ์ */
         @media print {
-            @page { 
-                size: A4; 
-                margin: 0; 
-            }
-            body { 
-                background-color: white !important; 
-                margin: 0;
-                padding: 0;
-            }
+            @page { size: A4; margin: 0; }
+            body { background-color: white !important; margin: 0; padding: 0; }
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            
-            #print-area { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-            }
-            
-            .page-break { 
-                page-break-after: always; 
-                break-after: page; 
-                border: none !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .page-break { page-break-after: always; break-after: page; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
             .no-print { display: none !important; }
-            
-            canvas {
-                width: 100% !important;
-                height: auto !important;
-            }
+            canvas { width: 100% !important; height: auto !important; }
         }
     </style>
     <script>
@@ -74,7 +46,7 @@
 </head>
 <body class="min-h-screen pb-10 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
 
-    <!-- ปุ่มสลับโหมดมืด/สว่าง -->
+    <!-- Toggle Dark Mode Button -->
     <div class="fixed top-4 right-4 z-50 no-print">
         <button onclick="toggleDarkMode()" class="p-3 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-110 transition active:scale-95">
             <span id="dark-mode-icon-light" class="block dark:hidden">
@@ -93,16 +65,14 @@
     <div class="container mx-auto p-4 max-w-4xl no-print">
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 mb-6 border border-gray-100 dark:border-slate-700 transition-colors">
             <div class="flex flex-col items-center mb-6 text-center">
-                <!-- โลโก้ NRHOS -->
                 <div class="mb-4">
                     <img src="https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/NRHOS.png" 
                          alt="NRHOS Logo" 
                          class="h-24 w-auto drop-shadow-md">
                 </div>
                 <h1 class="text-3xl font-bold text-slate-800 dark:text-white">ระบบค้นหา หนังสือรับรองหักภาษี ณ ที่จ่าย</h1>
-                <p class="text-rose-600 dark:text-rose-400 mt-2 font-semibold">โรงพยาบาลนางรอง • ตรวจสอบข้อมูล 3 ส่วนให้ตรงกันในหน้าเดียว</p>
+                <p class="text-rose-600 dark:text-rose-400 mt-2 font-semibold text-lg">โรงพยาบาลนางรอง • ตรวจสอบข้อมูล 3 ส่วนให้ตรงกันในหน้าเดียว</p>
 
-                <!-- เพิ่มลิงก์ยื่นภาษี -->
                 <div class="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700 w-full flex flex-col items-center">
                     <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">ลิงก์ยื่นภาษีออนไลน์</p>
                     <a href="https://efiling.rd.go.th/rd-cms/" target="_blank" class="group flex flex-col items-center transition-transform hover:scale-105">
@@ -116,7 +86,6 @@
             </div>
 
             <div class="space-y-6 bg-slate-50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-600">
-                
                 <div class="hidden">
                     <textarea id="github-links">
                         https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภงด 1 ก.pdf,
@@ -126,10 +95,9 @@
                     </textarea>
                 </div>
 
-                <!-- ช่องค้นหา -->
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-slate-700 dark:text-slate-300 font-bold mb-2">1. เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-rose-500">*</span></label>
+                        <label class="block text-slate-700 dark:text-slate-300 font-bold mb-2">1. เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-rose-500">*จำเป็น</span></label>
                         <input type="text" id="search-taxid" placeholder="กรอกเลข 13 หลัก" maxlength="13" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-mono dark:text-white dark:placeholder-slate-500">
                     </div>
 
@@ -143,6 +111,7 @@
                             <input type="text" id="search-lastname" placeholder="เช่น ออลสตาร์" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all dark:text-white dark:placeholder-slate-500">
                         </div>
                     </div>
+                    <p class="text-xs text-slate-400 italic">คำแนะนำ: โปรดระบุข้อมูลให้ครบถ้วน ระบบจะตรวจสอบเลข 13 หลัก ร่วมกับชื่อหรือนามสกุล</p>
                 </div>
 
                 <button onclick="startSearch()" id="search-btn" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center text-lg">
@@ -157,21 +126,20 @@
         </div>
     </div>
 
-    <!-- ผลลัพธ์ -->
+    <!-- Result Area -->
     <div id="result-container" class="container mx-auto p-4 hidden">
         <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-2xl p-6 mb-8 no-print flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm transition-colors">
             <div>
                 <h2 class="text-2xl font-bold text-rose-900 dark:text-rose-100">ตรวจสอบพบข้อมูล</h2>
-                <p class="text-rose-700 dark:text-rose-300 font-medium">กรุณาตรวจสอบรายละเอียดก่อนสั่งพิมพ์</p>
+                <p class="text-rose-700 dark:text-rose-300 font-medium">กรุณาตรวจสอบความถูกต้องของหน้าเอกสารก่อนสั่งพิมพ์</p>
             </div>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg flex items-center transition transform hover:scale-105 active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                สั่งพิมพ์ใบหักภาษี
+                สั่งพิมพ์หนังสือรับรอง
             </button>
         </div>
-        
         <div id="print-area" class="flex flex-col items-center pb-20"></div>
     </div>
 
@@ -188,26 +156,33 @@
 
         async function startSearch() {
             const linksText = document.getElementById('github-links').value.trim();
-            const taxId = document.getElementById('search-taxid').value.trim();
-            const fName = document.getElementById('search-name').value.trim();
-            const lName = document.getElementById('search-lastname').value.trim();
+            const taxIdInput = document.getElementById('search-taxid').value.trim();
+            const fNameInput = document.getElementById('search-name').value.trim();
+            const lNameInput = document.getElementById('search-lastname').value.trim();
+            
             const status = document.getElementById('status');
             const printArea = document.getElementById('print-area');
             const resultDiv = document.getElementById('result-container');
             const btn = document.getElementById('search-btn');
 
-            if (!taxId || !fName || !lName) {
-                status.innerHTML = '<span class="text-amber-600 dark:text-amber-400">⚠️ กรุณากรอกข้อมูลให้ครบทั้ง 3 ช่อง</span>';
+            // เงื่อนไข: ช่องค้นหาต้องไม่มีค่าว่าง
+            if (!taxIdInput || !fNameInput || !lNameInput) {
+                status.innerHTML = '<span class="text-amber-600 dark:text-amber-400 font-bold">⚠️ กรุณากรอกข้อมูลให้ครบทั้ง 3 ช่อง (เลข 13 หลัก, ชื่อ และนามสกุล)</span>';
                 return;
             }
 
             btn.disabled = true;
-            status.innerHTML = '<div class="text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2 animate-pulse"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังค้นหาในฐานข้อมูล...</span></div>';
+            status.innerHTML = '<div class="text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2 animate-pulse"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังค้นหาหนังสือรับรองในระบบ...</span></div>';
             printArea.innerHTML = '';
             resultDiv.classList.add('hidden');
 
             const links = linksText.split(',').map(l => l.trim()).filter(l => l !== "");
             let matches = 0;
+
+            // จัดรูปแบบข้อความค้นหา (ลบช่องว่าง)
+            const targetTax = taxIdInput.replace(/[\s-]/g, '');
+            const targetF = fNameInput.replace(/\s+/g, '');
+            const targetL = lNameInput.replace(/\s+/g, '');
 
             try {
                 for (let link of links) {
@@ -220,18 +195,23 @@
                         const pdf = await pdfjsLib.getDocument({ data }).promise;
 
                         for (let i = 1; i <= pdf.numPages; i++) {
-                            status.innerText = `ตรวจสอบ: ${fileName} (หน้า ${i}/${pdf.numPages})`;
+                            status.innerText = `กำลังตรวจสอบ: ${fileName} (หน้า ${i}/${pdf.numPages})`;
                             const page = await pdf.getPage(i);
                             const textContent = await page.getTextContent();
                             
+                            // รวมข้อความในหน้าและลบช่องว่างเพื่อการค้นหาที่แม่นยำขึ้น
                             const rawText = textContent.items.map(item => item.str).join('');
                             const cleanText = rawText.replace(/[\s-]/g, '');
                             
-                            const targetTax = taxId.replace(/[\s-]/g, '');
-                            const targetF = fName.replace(/\s+/g, '');
-                            const targetL = lName.replace(/\s+/g, '');
+                            // เงื่อนไขหลัก: เลข 13 หลักต้องตรงเป๊ะ
+                            const taxMatch = cleanText.includes(targetTax);
+                            
+                            // เงื่อนไขรอง: ชื่อ หรือ นามสกุล อย่างใดอย่างหนึ่งต้องปรากฏในหน้านั้น (สะกดใกล้เคียง)
+                            const nameMatch = cleanText.includes(targetF);
+                            const lastNameMatch = cleanText.includes(targetL);
 
-                            if (cleanText.includes(targetTax) && cleanText.includes(targetF) && cleanText.includes(targetL)) {
+                            // กฎการจับคู่: Tax ตรง AND (ชื่อตรง OR นามสกุลตรง)
+                            if (taxMatch && (nameMatch || lastNameMatch)) {
                                 matches++;
                                 await renderPage(page, printArea);
                             }
@@ -240,13 +220,17 @@
                 }
 
                 if (matches > 0) {
-                    status.innerHTML = `<span class="text-green-600 dark:text-green-400 font-bold text-xl">✅ พบเอกสารที่ตรงกัน ${matches} รายการ</span>`;
+                    status.innerHTML = `<span class="text-green-600 dark:text-green-400 font-bold text-xl">✅ ตรวจสอบพบเอกสารที่ตรงกัน ${matches} ฉบับ</span>`;
                     resultDiv.classList.remove('hidden');
                     setTimeout(() => resultDiv.scrollIntoView({ behavior: 'smooth' }), 300);
                 } else {
-                    status.innerHTML = `<div class="bg-rose-100 dark:bg-rose-900/40 p-4 rounded-xl text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                        <p class="font-bold">✖ ไม่พบข้อมูลที่ตรงกัน</p>
-                        <p class="text-sm">ตรวจสอบเลข 13 หลัก และชื่อ-นามสกุล อีกครั้ง</p>
+                    status.innerHTML = `<div class="bg-rose-100 dark:bg-rose-900/40 p-5 rounded-xl text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                        <p class="font-bold text-lg">✖ ไม่พบข้อมูลที่ตรงกันในฐานเอกสาร</p>
+                        <ul class="text-sm list-disc list-inside mt-2 text-left inline-block">
+                            <li>เลขประจำตัว 13 หลักไม่ถูกต้อง</li>
+                            <li>ชื่อหรือนามสกุลสะกดไม่ตรงกับที่ระบุในเอกสาร</li>
+                            <li>ไม่มีชื่อนี้ในรอบการหักภาษีปัจจุบัน</li>
+                        </ul>
                     </div>`;
                 }
             } finally {
