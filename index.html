@@ -3,301 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองล็อคร้านค้าประจำเดือน (2 ร้าน/วัน)</title>
+    <title>ระบบค้นหาใบหักภาษีจาก Google Drive</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
-        .calendar-loader {
-            position: absolute; inset: 0; background: rgba(255, 255, 255, 0.8);
-            display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 1rem;
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        @media print {
+            @page { size: A4; margin: 0; }
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .page-break { page-break-after: always; break-after: page; }
+            .no-print { display: none !important; }
         }
-        .shop-tag { font-size: 0.6rem; line-height: 1.1; padding: 2px 4px; border-radius: 4px; max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
-        .status-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 99px; }
-        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        /* Custom scrollbar for textarea */
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
-<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+<body class="min-h-screen">
 
-    <nav class="bg-blue-600 text-white shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i data-lucide="store" class="w-6 h-6 text-yellow-300"></i>
-                <span class="text-xl font-bold italic">SmartSpace Market</span>
+    <div class="container mx-auto p-4 max-w-4xl no-print">
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
+            <div class="flex items-center justify-center mb-4">
+                <div class="bg-blue-100 p-3 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-blue-900">ระบบสแกนใบหักภาษี (ภ.ง.ด.)</h1>
             </div>
-            <div id="connectionIndicator" class="text-xs bg-blue-500 px-3 py-1.5 rounded-full border border-blue-400 flex items-center">
-                <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                สถานะ: ตรวจสอบโควตา 2 ครั้ง/วัน
+            <p class="text-gray-500 text-center mb-8">ค้นหารายชื่อจากไฟล์ใน Google Drive และสั่งพิมพ์เฉพาะหน้านั้น</p>
+
+            <div class="space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
+                <!-- ส่วนใส่ Link Google Drive -->
+                <div>
+                    <label class="block text-slate-700 font-bold mb-2 flex items-center">
+                        <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">1</span>
+                        ลิงก์ไฟล์จาก Google Drive
+                    </label>
+                    <textarea id="drive-links" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono text-gray-600 bg-white" 
+                        placeholder="วางลิงก์ไฟล์ที่นี่... (คั่นด้วยเครื่องหมายจุลภาค , )">https://drive.google.com/file/d/1Is_fILr86RY95by3cLPC4ECwarsWd2Qk/view?usp=drive_link, 
+https://drive.google.com/file/d/1WUMELTyt1o-nJJROu_XTukY2dgak4l7E/view?usp=drive_link</textarea>
+                    <div class="flex justify-between items-center mt-2">
+                        <p class="text-xs text-amber-600 italic">* ตรวจสอบว่าไฟล์ตั้งค่า 'Anyone with the link' แล้ว</p>
+                        <button onclick="document.getElementById('drive-links').value=''" class="text-xs text-gray-400 hover:text-red-500 underline">ล้างค่าลิงก์</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-2 flex items-center">
+                            <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">2</span>
+                            ชื่อจริง
+                        </label>
+                        <input type="text" id="first-name" placeholder="ระบุชื่อ (เช่น สมชาย)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-2 flex items-center">
+                            <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">3</span>
+                            นามสกุล
+                        </label>
+                        <input type="text" id="last-name" placeholder="ระบุนามสกุล (เช่น ใจดี)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    </div>
+                </div>
+
+                <button id="search-btn" onclick="processFiles()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center text-lg">
+                    <svg id="btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>เริ่มค้นหาเอกสาร</span>
+                </button>
+            </div>
+            
+            <div id="status" class="mt-6 text-center font-medium min-h-[40px]"></div>
+        </div>
+    </div>
+
+    <!-- ผลลัพธ์ -->
+    <div id="result-container" class="container mx-auto p-4 hidden">
+        <div class="flex justify-between items-center mb-6 no-print bg-white p-5 rounded-xl shadow-md border border-blue-100 sticky top-4 z-50">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center">
+                    <span class="bg-green-500 w-3 h-3 rounded-full mr-2 animate-pulse"></span>
+                    พบเอกสารต้นฉบับ
+                </h2>
+                <p class="text-sm text-gray-500">พิมพ์เฉพาะหน้าที่ต้องการได้ทันที</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md flex items-center transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    สั่งพิมพ์เอกสาร
+                </button>
             </div>
         </div>
-    </nav>
-
-    <main class="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">จองล็อคร้านค้าประจำเดือน</h1>
-            <p class="text-gray-600 italic text-sm font-medium">จำกัดโควตา <span class="text-red-600 font-bold underline">2 ร้านค้าต่อวัน</span> ตรวจสอบจาก Column 1</p>
-        </div>
-
-        <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Calendar Section -->
-            <div class="lg:w-8/12 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative">
-                <div id="calendarLoader" class="calendar-loader hidden">
-                    <div class="flex flex-col items-center">
-                        <i data-lucide="refresh-cw" class="w-10 h-10 text-blue-500 animate-spin mb-3"></i>
-                        <span class="text-sm text-gray-500 font-medium font-bold">กำลังอัปเดตโควตาแบบเรียลไทม์...</span>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-semibold text-gray-800 flex items-center">
-                        <i data-lucide="calendar-check" class="w-5 h-5 mr-2 text-blue-500"></i>
-                        สถานะการจองล็อค
-                    </h2>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors"><i data-lucide="chevron-left"></i></button>
-                        <span id="currentMonthYear" class="font-bold text-lg min-w-[150px] text-center text-blue-900"></span>
-                        <button onclick="changeMonth(1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors"><i data-lucide="chevron-right"></i></button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-7 gap-1 mb-4 text-center font-bold text-xs text-gray-400 uppercase tracking-wider">
-                    <div class="text-red-400">อา.</div><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div class="text-blue-400">ส.</div>
-                </div>
-                
-                <div id="calendarDays" class="grid grid-cols-7 gap-3"></div>
-
-                <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-6 text-[11px]">
-                    <div class="flex items-center text-gray-500">
-                        <span class="w-4 h-4 rounded bg-white border border-gray-200 mr-2 shadow-sm"></span> ว่าง (0/2)
-                    </div>
-                    <div class="flex items-center text-orange-600">
-                        <span class="w-4 h-4 rounded bg-orange-50 border border-orange-200 mr-2 shadow-sm"></span> จองแล้ว 1 (1/2)
-                    </div>
-                    <div class="flex items-center text-red-600">
-                        <span class="w-4 h-4 rounded bg-red-600 border border-red-700 mr-2 shadow-sm"></span> <span class="font-bold">เต็มแล้ว (2/2)</span>
-                    </div>
-                    <div class="flex items-center text-gray-300">
-                        <span class="w-4 h-4 rounded bg-gray-100 border border-transparent mr-2"></span> ปิดจอง/อดีต
-                    </div>
-                </div>
-            </div>
-
-            <!-- Form Section -->
-            <div class="lg:w-4/12">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sticky top-6">
-                    <h2 class="text-xl font-semibold mb-6 flex items-center text-gray-800 border-b pb-4">
-                        <i data-lucide="edit-3" class="w-5 h-5 mr-2 text-blue-500"></i>
-                        ข้อมูลการจอง
-                    </h2>
-
-                    <form id="bookingForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">วันที่เลือก</label>
-                            <div class="relative">
-                                <i data-lucide="calendar-check-2" class="absolute left-3 top-3.5 w-5 h-5 text-blue-400"></i>
-                                <input type="text" id="selectedDateDisplay" readonly placeholder="คลิกเลือกวันที่บนปฏิทิน" required
-                                    class="w-full pl-10 pr-4 py-3 bg-blue-50 border-none rounded-xl text-blue-700 font-bold focus:outline-none placeholder:text-blue-300">
-                            </div>
-                            <input type="hidden" id="selectedDateValue" name="bookDate">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">ชื่อร้านค้า</label>
-                            <input type="text" name="shopName" required placeholder="ระบุชื่อร้านค้า"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">ชื่อผู้จอง</label>
-                            <input type="text" name="fullName" required placeholder="ชื่อ-นามสกุล"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">เบอร์โทรศัพท์</label>
-                            <input type="tel" name="phoneNumber" required pattern="[0-9]{9,10}" placeholder="08xxxxxxxx"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                        </div>
-                        <button type="submit" id="submitBtn" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="flex items-center justify-center">
-                                <i data-lucide="check-square" class="w-5 h-5 mr-2"></i>
-                                บันทึกการจอง
-                            </span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+        
+        <div id="print-area" class="flex flex-col items-center gap-10 pb-20"></div>
+    </div>
 
     <script>
-        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdydGkb8r-FJH9CGm-MC85UWvS0ZmNwdXMtbJUfijhlLRjBm53yNiows46WGZn7Rbp/exec';
-
-        let currentDate = new Date();
-        let currentMonth = currentDate.getMonth();
-        let currentYear = currentDate.getFullYear();
-        let selectedDateString = null;
-        let bookingData = {}; 
-        const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-
-        init();
-
-        async function init() {
-            lucide.createIcons();
-            await fetchBookingData(); 
-        }
-
-        async function fetchBookingData() {
-            const loader = document.getElementById('calendarLoader');
-            loader.classList.remove('hidden');
-            try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
-                const data = await response.json();
-                bookingData = data || {};
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                showToast('ไม่สามารถดึงข้อมูลโควตาได้', 'error');
-            } finally {
-                loader.classList.add('hidden');
-                renderCalendar();
+        // ฟังก์ชันแปลงลิงก์ Google Drive ให้เป็น Direct Download Link โดยใช้ Proxy เพื่อเลี่ยง CORS
+        function getDirectLink(url) {
+            const regex = /\/d\/([^\/]+)/;
+            const match = url.match(regex);
+            if (match && match[1]) {
+                // ใช้ลิงก์ดาวน์โหลดตรงผ่าน API
+                return `https://docs.google.com/uc?export=download&id=${match[1]}`;
             }
+            return url;
         }
 
-        function renderCalendar() {
-            const calendarDaysEl = document.getElementById('calendarDays');
-            document.getElementById('currentMonthYear').textContent = `${monthNames[currentMonth]} ${currentYear + 543}`;
-            calendarDaysEl.innerHTML = '';
+        async function processFiles() {
+            const linksText = document.getElementById('drive-links').value.trim();
+            const fName = document.getElementById('first-name').value.trim();
+            const lName = document.getElementById('last-name').value.trim();
+            const status = document.getElementById('status');
+            const printArea = document.getElementById('print-area');
+            const resultContainer = document.getElementById('result-container');
+            const btn = document.getElementById('search-btn');
 
-            const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const today = new Date(); today.setHours(0,0,0,0);
-
-            for (let i = 0; i < firstDayIndex; i++) calendarDaysEl.appendChild(document.createElement('div'));
-
-            for (let i = 1; i <= lastDay; i++) {
-                const dateObj = new Date(currentYear, currentMonth, i);
-                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const dayOfWeek = dateObj.getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isPast = dateObj < today;
-                
-                // Logic ตรวจสอบจำนวนการจอง (Quota)
-                const currentBooking = bookingData[dateStr] || { count: 0, shops: [] };
-                const bookingCount = currentBooking.count || 0;
-                const isFull = bookingCount >= 2; 
-
-                const dayBtn = document.createElement('div');
-                let statusClasses = 'bg-white border-gray-100 text-gray-700 hover:border-blue-400 cursor-pointer shadow-sm';
-                
-                if (isPast || isWeekend) {
-                    statusClasses = 'bg-gray-100 border-transparent text-gray-300 cursor-not-allowed opacity-60';
-                } else if (isFull) {
-                    statusClasses = 'bg-red-50 border-red-300 text-red-600 cursor-not-allowed';
-                } else if (bookingCount === 1) {
-                    statusClasses = 'bg-orange-50 border-orange-200 text-orange-700 hover:border-blue-400 cursor-pointer';
-                }
-
-                if (dateStr === selectedDateString) {
-                    statusClasses = 'bg-blue-600 border-blue-700 text-white shadow-lg scale-105 z-10 ring-4 ring-blue-100';
-                }
-
-                dayBtn.className = `min-h-[110px] flex flex-col items-center p-2 rounded-2xl border transition-all text-sm font-semibold ${statusClasses}`;
-                
-                // แสดงรายชื่อร้าน หรือคำว่า "เต็มแล้ว"
-                let contentHtml = '';
-                if (isFull) {
-                    contentHtml = `<div class="mt-2 text-[10px] font-bold text-red-600 bg-red-200 px-3 py-1 rounded-full animate-pulse uppercase tracking-tighter">เต็มแล้ว</div>`;
-                } else {
-                    currentBooking.shops.forEach(shop => {
-                        contentHtml += `<div class="shop-tag ${dateStr === selectedDateString ? 'bg-blue-500 text-white' : 'bg-blue-50 border border-blue-100 text-blue-600'}">${shop}</div>`;
-                    });
-                }
-
-                // การแสดงผล Status Badge
-                let badgeColor = 'bg-gray-100 text-gray-500';
-                if (bookingCount === 1) badgeColor = 'bg-orange-200 text-orange-800';
-                if (isFull) badgeColor = 'bg-red-600 text-white shadow-sm';
-                if (dateStr === selectedDateString) badgeColor = 'bg-white text-blue-700';
-
-                dayBtn.innerHTML = `
-                    <div class="w-full flex justify-between items-center mb-1">
-                        <span class="text-base font-bold">${i}</span>
-                        ${!isPast && !isWeekend ? `<span class="status-badge ${badgeColor}">${bookingCount}/2</span>` : ''}
-                    </div>
-                    <div class="flex flex-col w-full items-center mt-1 overflow-hidden space-y-1">
-                        ${contentHtml}
-                    </div>
-                `;
-
-                // การล็อคสิทธิ์: ถ้าเต็มแล้วจะไม่สามารถกดเลือกได้
-                if (!isFull && !isPast && !isWeekend) {
-                    dayBtn.onclick = () => selectDate(dateStr, i);
-                }
-                
-                calendarDaysEl.appendChild(dayBtn);
+            if (!linksText || (!fName && !lName)) {
+                alert("กรุณาระบุลิงก์ไฟล์และระบุชื่อ/นามสกุลที่ต้องการค้นหาครับ");
+                return;
             }
-            lucide.createIcons();
-        }
 
-        function selectDate(dateStr, day) {
-            selectedDateString = dateStr;
-            document.getElementById('selectedDateDisplay').value = `${day} ${monthNames[currentMonth]} ${currentYear + 543}`;
-            document.getElementById('selectedDateValue').value = dateStr;
-            renderCalendar();
-        }
-
-        function changeMonth(dir) {
-            currentMonth += dir;
-            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-            else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-            renderCalendar();
-        }
-
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-            if (!selectedDateString) return showToast('กรุณาเลือกวันที่ยังว่างบนปฏิทิน', 'error');
-
-            const btn = document.getElementById('submitBtn');
-            const originalHtml = btn.innerHTML;
+            // UI Loading State
             btn.disabled = true;
-            btn.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin mr-2"></i> กำลังบันทึกการจอง...`;
-            lucide.createIcons();
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            status.innerHTML = '<div class="flex items-center justify-center gap-2 text-blue-600"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังวิเคราะห์ไฟล์จาก Google Drive...</span></div>';
+            printArea.innerHTML = '';
+            resultContainer.classList.add('hidden');
+
+            const links = linksText.split(',').map(l => l.trim()).filter(l => l !== "");
+            let foundCount = 0;
 
             try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, { method: 'POST', body: new FormData(e.target) });
-                const result = await response.json();
-                
-                if (result.result === 'success') {
-                    showToast('บันทึกการจองสำเร็จ!', 'success');
-                    e.target.reset();
-                    selectedDateString = null;
-                    document.getElementById('selectedDateDisplay').value = '';
-                    await fetchBookingData(); // รีเฟรชข้อมูลโควตาทันที
-                } else {
-                    throw new Error(result.message);
+                for (let link of links) {
+                    try {
+                        const directUrl = getDirectLink(link);
+                        
+                        // ในบางกรณี CORS อาจจะบล็อกการ fetch ตรงๆ จาก Drive
+                        // หากพบปัญหา แนะนำให้ดาวน์โหลดไฟล์มาใส่เองในเครื่องจะดีที่สุด
+                        const response = await fetch(directUrl);
+                        if (!response.ok) throw new Error("ไฟล์เข้าถึงไม่ได้ กรุณาตรวจสอบการตั้งค่าแชร์ไฟล์ใน Drive");
+                        
+                        const arrayBuffer = await response.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            status.innerHTML = `<span class="text-blue-500 font-bold animate-pulse">กำลังสแกนไฟล์ที่ ${links.indexOf(link) + 1} หน้าที่ ${i} / ${pdf.numPages}</span>`;
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            const text = content.items.map(item => item.str).join('').replace(/\s+/g, '');
+
+                            const searchF = fName.replace(/\s+/g, '');
+                            const searchL = lName.replace(/\s+/g, '');
+
+                            let match = false;
+                            if (searchF && searchL) {
+                                if (text.includes(searchF) && text.includes(searchL)) match = true;
+                            } else {
+                                if (text.includes(searchF || searchL)) match = true;
+                            }
+
+                            if (match) {
+                                foundCount++;
+                                await renderToCanvas(page, printArea, i, foundCount);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        status.innerHTML += `<br><span class="text-red-500 text-xs">⚠️ ไม่สามารถโหลดไฟล์บางรายการได้: ${err.message}</span>`;
+                    }
                 }
-            } catch (error) {
-                showToast('จองไม่สำเร็จ: ' + error.message, 'error');
+
+                if (foundCount > 0) {
+                    status.innerHTML = `<span class="text-green-600 font-bold text-xl">✨ ค้นพบเสร็จสิ้น! เจอทั้งหมด ${foundCount} รายการ</span>`;
+                    resultContainer.classList.remove('hidden');
+                    resultContainer.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    status.innerHTML = `<span class="text-red-500 font-bold text-lg">✖ ไม่พบรายชื่อ "${fName} ${lName}" ในไฟล์เหล่านี้</span>`;
+                }
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalHtml;
-                lucide.createIcons();
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
-        function showToast(msg, type) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `p-4 rounded-xl shadow-2xl bg-white border-l-4 flex items-center toast-enter ${type === 'success' ? 'border-green-500 text-green-800' : 'border-red-500 text-red-800'}`;
-            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-5 h-5 mr-2"></i> <span class="text-sm font-bold">${msg}</span>`;
-            container.appendChild(toast);
-            lucide.createIcons();
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(20px)';
-                setTimeout(() => toast.remove(), 500);
-            }, 5000);
+        async function renderToCanvas(page, container, originalPageNum, foundIndex) {
+            const viewport = page.getViewport({ scale: 2.0 }); // High DPI for printing
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-break bg-white shadow-2xl border border-gray-300 relative group overflow-hidden';
+            
+            // Label for tracking
+            const label = document.createElement('div');
+            label.className = 'no-print absolute top-2 right-2 bg-blue-600 text-white px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition';
+            label.innerText = `รายการที่ ${foundIndex} (หน้าเดิม: ${originalPageNum})`;
+            wrapper.appendChild(label);
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            // Set display size to A4 aspect ratio
+            canvas.style.width = "210mm"; 
+            canvas.style.height = "auto";
+            
+            wrapper.appendChild(canvas);
+            container.appendChild(wrapper);
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
         }
     </script>
 </body>
