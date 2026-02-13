@@ -3,77 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบค้นหาใบหักภาษีจาก Google Drive</title>
+    <title>ระบบค้นหาใบหักภาษี (Strict Search)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+        
+        /* สไตล์สำหรับการแสดงผลบนหน้าจอ */
+        .page-preview {
+            background-color: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 2.5rem;
+            border-radius: 4px;
+        }
+
+        /* สไตล์สำหรับการพิมพ์ */
         @media print {
-            @page { size: A4; margin: 0; }
+            @page { 
+                size: A4; 
+                margin: 0; 
+            }
+            body { 
+                background-color: white; 
+                margin: 0;
+                padding: 0;
+            }
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-            .page-break { page-break-after: always; break-after: page; }
+            
+            #print-area { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+            }
+            
+            .page-break { 
+                page-break-after: always; 
+                break-after: page; 
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
             .no-print { display: none !important; }
+            
+            canvas {
+                width: 100% !important;
+                height: auto !important;
+            }
         }
-        textarea::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen pb-10">
 
     <div class="container mx-auto p-4 max-w-4xl no-print">
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
-            <div class="flex items-center justify-center mb-4">
-                <div class="bg-blue-100 p-3 rounded-full mr-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <div class="flex flex-col items-center mb-6">
+                <div class="bg-rose-600 text-white p-4 rounded-2xl mb-4 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-bold text-blue-900">ระบบสแกนใบหักภาษี (ภ.ง.ด.)</h1>
+                <h1 class="text-3xl font-bold text-slate-800">ระบบค้นหาใบหักภาษี</h1>
+                <p class="text-rose-600 mt-2 text-center font-semibold">เงื่อนไข: ข้อมูลทั้ง 3 อย่างต้องตรงกันในหน้าเดียวเท่านั้น</p>
             </div>
-            <p class="text-gray-500 text-center mb-8">ค้นหารายชื่อจากไฟล์ใน Google Drive และสั่งพิมพ์เฉพาะหน้านั้น</p>
 
-            <div class="space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
-                <div>
-                    <label class="block text-slate-700 font-bold mb-2 flex items-center">
-                        <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">1</span>
-                        ลิงก์ไฟล์จาก Google Drive
-                    </label>
-                    <textarea id="drive-links" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono text-gray-600 bg-white" 
-                        placeholder="วางลิงก์ไฟล์ที่นี่...">https://drive.google.com/file/d/1Is_fILr86RY95by3cLPC4ECwarsWd2Qk/view?usp=sharing</textarea>
-                    <div class="flex justify-between items-center mt-2">
-                        <p class="text-xs text-amber-600 italic">* ตรวจสอบว่าไฟล์ตั้งค่า 'Anyone with the link' (ทุกคนที่มีลิงก์) แล้ว</p>
+            <div class="space-y-6 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                
+                <!-- ส่วนลิงก์ถูกซ่อนไว้ (Hidden) -->
+                <div class="hidden">
+                    <textarea id="github-links">https://raw.githubusercontent.com/rattanapaiboon/Risk-Treatment/main/ภงด 1 ก.pdf, https://raw.githubusercontent.com/rattanapaiboon/Risk-Treatment/main/ภงด 1 ก พิเศษ.pdf</textarea>
+                </div>
+
+                <!-- ช่องค้นหาแบบบังคับครบทุกช่อง -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-2">1. เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-rose-500">*</span></label>
+                        <input type="text" id="search-taxid" placeholder="กรอกเลข 13 หลัก" maxlength="13" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-mono">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-2">2. ชื่อ (ไม่ต้องมีคำนำหน้า) <span class="text-rose-500">*</span></label>
+                            <input type="text" id="search-name" placeholder="เช่น สยุมพร" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-2">3. นามสกุล <span class="text-rose-500">*</span></label>
+                            <input type="text" id="search-lastname" placeholder="เช่น โลห์นารายณ์" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all">
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-2 flex items-center">
-                            <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">2</span>
-                            ชื่อจริง
-                        </label>
-                        <input type="text" id="first-name" placeholder="ระบุชื่อ (เช่น สมชาย)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-2 flex items-center">
-                            <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 font-mono">3</span>
-                            นามสกุล
-                        </label>
-                        <input type="text" id="last-name" placeholder="ระบุนามสกุล (เช่น ใจดี)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    </div>
-                </div>
-
-                <button id="search-btn" onclick="processFiles()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center text-lg">
-                    <svg id="btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button onclick="startSearch()" id="search-btn" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <span>เริ่มค้นหาเอกสาร</span>
+                    ตรวจสอบข้อมูลและค้นหา
                 </button>
             </div>
             
@@ -81,124 +114,117 @@
         </div>
     </div>
 
+    <!-- ผลลัพธ์ -->
     <div id="result-container" class="container mx-auto p-4 hidden">
-        <div class="flex justify-between items-center mb-6 no-print bg-white p-5 rounded-xl shadow-md border border-blue-100 sticky top-4 z-50">
+        <div class="bg-rose-50 border border-rose-100 rounded-2xl p-6 mb-8 no-print flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
             <div>
-                <h2 class="text-xl font-bold text-slate-800 flex items-center">
-                    <span class="bg-green-500 w-3 h-3 rounded-full mr-2 animate-pulse"></span>
-                    พบเอกสารต้นฉบับ
-                </h2>
-                <p class="text-sm text-gray-500">ตรวจสอบและสั่งพิมพ์เอกสาร</p>
+                <h2 class="text-2xl font-bold text-rose-900">ยืนยันข้อมูลถูกต้อง</h2>
+                <p class="text-rose-700 font-medium">พบหน้าที่ข้อมูลทั้ง 3 ส่วนตรงกันสมบูรณ์</p>
             </div>
-            <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md flex items-center transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg flex items-center transition transform hover:scale-105 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                สั่งพิมพ์เอกสาร
+                พิมพ์ใบหักภาษี
             </button>
         </div>
         
-        <div id="print-area" class="flex flex-col items-center gap-10 pb-20"></div>
+        <div id="print-area" class="flex flex-col items-center pb-20"></div>
     </div>
 
     <script>
-        function getDirectLink(url) {
-            const regex = /\/d\/([^\/]+)/;
-            const match = url.match(regex);
-            if (match && match[1]) {
-                return `https://docs.google.com/uc?export=download&id=${match[1]}`;
-            }
-            return url;
-        }
-
-        async function processFiles() {
-            const linksText = document.getElementById('drive-links').value.trim();
-            const fName = document.getElementById('first-name').value.trim();
-            const lName = document.getElementById('last-name').value.trim();
+        async function startSearch() {
+            const linksText = document.getElementById('github-links').value.trim();
+            const taxId = document.getElementById('search-taxid').value.trim();
+            const fName = document.getElementById('search-name').value.trim();
+            const lName = document.getElementById('search-lastname').value.trim();
             const status = document.getElementById('status');
             const printArea = document.getElementById('print-area');
-            const resultContainer = document.getElementById('result-container');
+            const resultDiv = document.getElementById('result-container');
             const btn = document.getElementById('search-btn');
 
-            if (!linksText || (!fName && !lName)) {
-                alert("กรุณาระบุลิงก์ไฟล์และระบุชื่อ/นามสกุลที่ต้องการค้นหาครับ");
+            // เงื่อนไขบังคับกรอกครบทั้ง 3 อย่าง
+            if (!taxId || !fName || !lName) {
+                status.innerHTML = '<span class="text-amber-600">⚠️ กรุณากรอกข้อมูลให้ครบทั้ง 3 ช่องเพื่อความถูกต้อง</span>';
                 return;
             }
 
             btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            status.innerHTML = '<div class="flex items-center justify-center gap-2 text-blue-600"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังสแกนไฟล์...</span></div>';
+            status.innerHTML = '<div class="text-rose-600 flex items-center justify-center gap-2 animate-pulse"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังตรวจสอบข้อมูลอย่างละเอียด...</span></div>';
             printArea.innerHTML = '';
-            resultContainer.classList.add('hidden');
+            resultDiv.classList.add('hidden');
 
             const links = linksText.split(',').map(l => l.trim()).filter(l => l !== "");
-            let foundCount = 0;
+            let matches = 0;
 
             try {
                 for (let link of links) {
                     try {
-                        const directUrl = getDirectLink(link);
-                        const response = await fetch(directUrl);
-                        if (!response.ok) throw new Error("เข้าถึงไฟล์ไม่ได้ กรุณาตรวจสอบการแชร์ไฟล์");
+                        const response = await fetch(link);
+                        if (!response.ok) throw new Error("Connection failed");
                         
-                        const arrayBuffer = await response.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        const data = await response.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data }).promise;
 
                         for (let i = 1; i <= pdf.numPages; i++) {
-                            status.innerHTML = `<span class="text-blue-500 animate-pulse">กำลังสแกนหน้า ${i} / ${pdf.numPages}...</span>`;
+                            status.innerText = `กำลังตรวจสอบหน้าที่ ${i}/${pdf.numPages}...`;
                             const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            const text = content.items.map(item => item.str).join('').replace(/\s+/g, '');
+                            const textContent = await page.getTextContent();
+                            
+                            const rawText = textContent.items.map(item => item.str).join('');
+                            const cleanText = rawText.replace(/[\s-]/g, '');
+                            
+                            const targetTax = taxId.replace(/[\s-]/g, '');
+                            const targetF = fName.replace(/\s+/g, '');
+                            const targetL = lName.replace(/\s+/g, '');
 
-                            const searchF = fName.replace(/\s+/g, '');
-                            const searchL = lName.replace(/\s+/g, '');
+                            // เงื่อนไข Strict: ต้องมีครบทั้ง 3 อย่างในหน้าเดียวกัน
+                            const hasTax = cleanText.includes(targetTax);
+                            const hasFName = cleanText.includes(targetF);
+                            const hasLName = cleanText.includes(targetL);
 
-                            let match = false;
-                            if (searchF && searchL) {
-                                if (text.includes(searchF) && text.includes(searchL)) match = true;
-                            } else {
-                                if (text.includes(searchF || searchL)) match = true;
-                            }
-
-                            if (match) {
-                                foundCount++;
-                                await renderToCanvas(page, printArea, i, foundCount);
+                            if (hasTax && hasFName && hasLName) {
+                                matches++;
+                                await renderPage(page, printArea);
                             }
                         }
                     } catch (err) {
-                        console.error(err);
-                        status.innerHTML += `<br><span class="text-red-500 text-xs">⚠️ ข้อผิดพลาด: ${err.message}</span>`;
+                        console.error("Error processing file:", link, err);
                     }
                 }
 
-                if (foundCount > 0) {
-                    status.innerHTML = `<span class="text-green-600 font-bold text-xl">✅ พบเอกสารทั้งหมด ${foundCount} หน้า</span>`;
-                    resultContainer.classList.remove('hidden');
+                if (matches > 0) {
+                    status.innerHTML = `<span class="text-green-600 font-bold text-xl">✅ ตรวจสอบพบข้อมูลตรงกันทั้งหมด ${matches} หน้า</span>`;
+                    resultDiv.classList.remove('hidden');
+                    setTimeout(() => resultDiv.scrollIntoView({ behavior: 'smooth' }), 300);
                 } else {
-                    status.innerHTML = `<span class="text-red-500 font-bold text-lg">✖ ไม่พบรายชื่อ "${fName} ${lName}"</span>`;
+                    status.innerHTML = `<div class="bg-rose-100 p-4 rounded-xl text-rose-700 border border-rose-200">
+                        <p class="font-bold">✖ ไม่พบหน้าที่ข้อมูลตรงกันทั้ง 3 ส่วน</p>
+                        <p class="text-sm">กรุณาตรวจสอบ เลขผู้เสียภาษี, ชื่อ หรือนามสกุล อีกครั้ง</p>
+                    </div>`;
                 }
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
-        async function renderToCanvas(page, container, originalPageNum, foundIndex) {
-            const viewport = page.getViewport({ scale: 2.0 });
+        async function renderPage(page, container) {
+            const viewport = page.getViewport({ scale: 2.5 });
             const wrapper = document.createElement('div');
-            wrapper.className = 'page-break bg-white shadow-xl border border-gray-200 relative';
+            wrapper.className = 'page-break page-preview';
             
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
+            
             canvas.style.width = "210mm"; 
             canvas.style.height = "auto";
             
             wrapper.appendChild(canvas);
             container.appendChild(wrapper);
 
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            await page.render({ canvasContext: context, viewport }).promise;
         }
     </script>
 </body>
