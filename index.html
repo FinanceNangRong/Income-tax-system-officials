@@ -67,23 +67,30 @@
     <div class="container mx-auto p-4 max-w-4xl no-print">
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
             <div class="flex flex-col items-center mb-6">
-                <div class="bg-rose-600 text-white p-4 rounded-2xl mb-4 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+                <!-- อัปเดตโลโก้จาก GitHub -->
+                <div class="mb-4">
+                    <img src="https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/NRHOS.png" 
+                         alt="Logo" 
+                         class="h-24 w-auto drop-shadow-md"
+                         onerror="this.src='https://via.placeholder.com/100?text=NRHOS'">
                 </div>
-                <h1 class="text-3xl font-bold text-slate-800">ค้นหาหนังสือรับรองหักภาษี ณ ที่จ่าย</h1>
-                <p class="text-rose-600 mt-2 text-center font-semibold">เงื่อนไข: ข้อมูลทั้ง 3 อย่างต้องตรงกันในหน้าเดียวเท่านั้น</p>
+                <h1 class="text-3xl font-bold text-slate-800">ระบบค้นหา หนังสือรับรองหักภาษี ณ ที่จ่าย</h1>
+                <p class="text-rose-600 mt-2 text-center font-semibold">โรงพยาบาลนางรอง • ตรวจสอบข้อมูล 3 ส่วนให้ตรงกันในหน้าเดียว</p>
             </div>
 
             <div class="space-y-6 bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 
-                <!-- ส่วนลิงก์ถูกซ่อนไว้ (Hidden) - อัปเดตแหล่งที่มาใหม่ -->
+                <!-- ส่วนลิงก์ถูกซ่อนไว้ (Hidden) -->
                 <div class="hidden">
-                    <textarea id="github-links">https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภงด 1 ก.pdf, https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภงด 1 ก พิเศษ.pdf</textarea>
+                    <textarea id="github-links">
+                        https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภงด 1 ก.pdf,
+                        https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภงด 1 ก พิเศษ.pdf,
+                        https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภาษี ลูกจ้าง ปี 2568.pdf,
+                        https://raw.githubusercontent.com/FinanceNangRong/Income-tax-system-officials/main/ภาษีปี 2568 ข้าราชการ.pdf
+                    </textarea>
                 </div>
 
-                <!-- ช่องค้นหาแบบบังคับครบทุกช่อง -->
+                <!-- ช่องค้นหา -->
                 <div class="space-y-4">
                     <div>
                         <label class="block text-slate-700 font-bold mb-2">1. เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-rose-500">*</span></label>
@@ -106,7 +113,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    ตรวจสอบข้อมูลและค้นหา
+                    ตรวจสอบข้อมูลและค้นหาเอกสาร
                 </button>
             </div>
             
@@ -119,13 +126,13 @@
         <div class="bg-rose-50 border border-rose-100 rounded-2xl p-6 mb-8 no-print flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
             <div>
                 <h2 class="text-2xl font-bold text-rose-900">ยืนยันข้อมูลถูกต้อง</h2>
-                <p class="text-rose-700 font-medium">พบหน้าที่ข้อมูลทั้ง 3 ส่วนตรงกันสมบูรณ์</p>
+                <p class="text-rose-700 font-medium">พบหน้าเอกสารที่ข้อมูลตรงกันสมบูรณ์</p>
             </div>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg flex items-center transition transform hover:scale-105 active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                พิมพ์ใบหักภาษี
+                สั่งพิมพ์ใบภาษี
             </button>
         </div>
         
@@ -143,14 +150,13 @@
             const resultDiv = document.getElementById('result-container');
             const btn = document.getElementById('search-btn');
 
-            // เงื่อนไขบังคับกรอกครบทั้ง 3 อย่าง
             if (!taxId || !fName || !lName) {
-                status.innerHTML = '<span class="text-amber-600">⚠️ กรุณากรอกข้อมูลให้ครบทั้ง 3 ช่องเพื่อความถูกต้อง</span>';
+                status.innerHTML = '<span class="text-amber-600">⚠️ กรุณากรอกข้อมูลให้ครบทั้ง 3 ช่องเพื่อเริ่มการค้นหา</span>';
                 return;
             }
 
             btn.disabled = true;
-            status.innerHTML = '<div class="text-rose-600 flex items-center justify-center gap-2 animate-pulse"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังตรวจสอบข้อมูลอย่างละเอียด...</span></div>';
+            status.innerHTML = '<div class="text-rose-600 flex items-center justify-center gap-2 animate-pulse"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังสแกนฐานข้อมูลภาษี...</span></div>';
             printArea.innerHTML = '';
             resultDiv.classList.add('hidden');
 
@@ -160,6 +166,7 @@
             try {
                 for (let link of links) {
                     try {
+                        const fileName = decodeURIComponent(link.split('/').pop());
                         const response = await fetch(link);
                         if (!response.ok) throw new Error("Connection failed");
                         
@@ -167,7 +174,7 @@
                         const pdf = await pdfjsLib.getDocument({ data }).promise;
 
                         for (let i = 1; i <= pdf.numPages; i++) {
-                            status.innerText = `กำลังตรวจสอบหน้าที่ ${i}/${pdf.numPages}...`;
+                            status.innerText = `กำลังตรวจสอบ: ${fileName} (หน้า ${i}/${pdf.numPages})`;
                             const page = await pdf.getPage(i);
                             const textContent = await page.getTextContent();
                             
@@ -178,7 +185,6 @@
                             const targetF = fName.replace(/\s+/g, '');
                             const targetL = lName.replace(/\s+/g, '');
 
-                            // เงื่อนไข Strict: ต้องมีครบทั้ง 3 อย่างในหน้าเดียวกัน
                             const hasTax = cleanText.includes(targetTax);
                             const hasFName = cleanText.includes(targetF);
                             const hasLName = cleanText.includes(targetL);
@@ -194,13 +200,13 @@
                 }
 
                 if (matches > 0) {
-                    status.innerHTML = `<span class="text-green-600 font-bold text-xl">✅ ตรวจสอบพบข้อมูลตรงกันทั้งหมด ${matches} หน้า</span>`;
+                    status.innerHTML = `<span class="text-green-600 font-bold text-xl">✅ ตรวจสอบพบเอกสารที่ถูกต้องรวม ${matches} รายการ</span>`;
                     resultDiv.classList.remove('hidden');
                     setTimeout(() => resultDiv.scrollIntoView({ behavior: 'smooth' }), 300);
                 } else {
                     status.innerHTML = `<div class="bg-rose-100 p-4 rounded-xl text-rose-700 border border-rose-200">
-                        <p class="font-bold">✖ ไม่พบหน้าที่ข้อมูลตรงกันทั้ง 3 ส่วน</p>
-                        <p class="text-sm">กรุณาตรวจสอบ เลขผู้เสียภาษี, ชื่อ หรือนามสกุล อีกครั้ง</p>
+                        <p class="font-bold">✖ ไม่พบข้อมูลที่ตรงกันทั้ง 3 ส่วนในหน้าเดียวกัน</p>
+                        <p class="text-sm">กรุณาตรวจสอบชื่อ-นามสกุล หรือเลข 13 หลักอีกครั้ง</p>
                     </div>`;
                 }
             } finally {
